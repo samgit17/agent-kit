@@ -11,9 +11,12 @@ LangGraph is powerful but the setup cost kills momentum.
 AgentKit removes that tax.
 
 ## Templates (coming soon)
-- Research Agent
-- Content Draft Agent
-- Task Breakdown Agent
+- 🔍 **Research Agent** — deep-dive any topic, returns structured summary
+- ✍️ **Content Draft Agent** — turns bullet points into publish-ready posts
+- 🧩 **Task Breakdown Agent** — splits a goal into actionable subtasks
+
+## Stack
+- LangGraph · Python · Ollama · Docker
 
 ## Status
 🚧 Active development — launching May 30, 2026
@@ -25,4 +28,7 @@ AgentKit removes that tax.
 ## Follow the Build
 I'm documenting every step publicly on LinkedIn — architecture decisions, 
 mistakes, and weekly progress. Follow along if you're building with AI agents.
+
+## Support
+If this saves you time, drop a ⭐ — it helps others find it.
 

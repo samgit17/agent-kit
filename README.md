@@ -19,5 +19,7 @@ AgentKit removes that tax.
 🚧 Active development — launching May 30, 2026
 
 ## Built by
-[@samgit17] — follow along on LinkedIn for build-in-public updates
+**Samuel Beera** — building in public
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?logo=linkedin)](https://www.linkedin.com/in/sambeera)
+
 

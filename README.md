@@ -22,4 +22,7 @@ AgentKit removes that tax.
 **Samuel Beera** — building in public
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?logo=linkedin)](https://www.linkedin.com/in/sambeera)
 
+## Follow the Build
+I'm documenting every step publicly on LinkedIn — architecture decisions, 
+mistakes, and weekly progress. Follow along if you're building with AI agents.
 

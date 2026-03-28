@@ -8,9 +8,6 @@ import os
 from models import SearchResult
 
 
-_MAX_CONTENT_CHARS = int(os.getenv("MAX_CONTENT_CHARS", "800"))
-
-
 def search(query: str, max_results: int | None = None) -> list[SearchResult]:
     """Execute a single search query and return structured results."""
     provider = os.getenv("SEARCH_PROVIDER", "tavily").lower()
@@ -35,7 +32,7 @@ def _tavily_search(query: str, max_results: int) -> list[SearchResult]:
             query=query,
             url=r.get("url", ""),
             title=r.get("title", ""),
-            content=r.get("content", "")[:_MAX_CONTENT_CHARS],
+            content=r.get("content", ""),
             score=r.get("score", 0.0),
         )
         for r in response.get("results", [])
@@ -52,8 +49,8 @@ def _ddg_search(query: str, max_results: int) -> list[SearchResult]:
                     query=query,
                     url=r.get("href", ""),
                     title=r.get("title", ""),
-                    content=r.get("body", "")[:_MAX_CONTENT_CHARS],
-                    score=0.0,
+                    content=r.get("body", ""),
+                    score=0.0,  # DuckDuckGo doesn't return relevance scores
                 )
             )
     return results

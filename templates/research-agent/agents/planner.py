@@ -2,11 +2,15 @@
 agents/planner.py — Breaks the user's question into focused search queries.
 """
 
+import logging
 import os
+
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
+from json_parser import ThinkingJsonOutputParser
 from llm_client import get_llm
 from models import ResearchState
+
+logger = logging.getLogger("research_agent")
 
 _SYSTEM = """You are a research planning agent. Given a research question, generate a list of
 focused web search queries that together will provide comprehensive coverage of the topic.
@@ -30,6 +34,18 @@ _prompt = ChatPromptTemplate.from_messages([
 
 def planner_node(state: ResearchState) -> dict:
     max_q = int(os.getenv("MAX_SEARCH_QUERIES", "5"))
-    chain = _prompt | get_llm() | JsonOutputParser()
-    result = chain.invoke({"query": state.query, "max_queries": max_q})
-    return {"search_queries": result.get("queries", [])}
+    try:
+        chain = _prompt | get_llm() | ThinkingJsonOutputParser()
+        result = chain.invoke({"query": state.query, "max_queries": max_q})
+        queries = result.get("queries", [])
+        if not queries:
+            raise ValueError("Model returned empty queries list")
+    except Exception as e:
+        # Fallback: split the query itself into 3 basic search terms
+        logger.warning("Planner LLM failed (%s) — using fallback queries", e)
+        queries = [
+            state.query,
+            f"{state.query} best practices",
+            f"{state.query} examples tutorial",
+        ]
+    return {"search_queries": queries}

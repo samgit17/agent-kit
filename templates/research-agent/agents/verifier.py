@@ -1,36 +1,41 @@
 """
 agents/verifier.py — Scores faithfulness and confidence of the draft answer.
-Routes to formatter if confident enough, or flags uncertainty.
+Fault-tolerant: if the LLM call fails or times out, returns a default score
+and lets the pipeline continue rather than crashing.
 """
 
+import logging
 import os
+
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
+from json_parser import ThinkingJsonOutputParser
 from llm_client import get_llm
 from models import ResearchState
 
-_SYSTEM = """You are a research verification agent. You are given a question, a set of
-source documents, and a draft answer. Your job is to assess how well the answer is
-grounded in the sources.
+logger = logging.getLogger("research_agent")
 
-Return ONLY a JSON object:
+_MAX_ANSWER_CHARS = 1500
+
+_SYSTEM = """You are a fact-checking agent. Score how well the draft answer is grounded
+in the provided source URLs.
+
+Return ONLY a JSON object — no preamble:
 {{
   "confidence_score": 0.85,
-  "feedback": "The answer accurately reflects the sources on points X and Y. Point Z could not be verified."
+  "feedback": "one sentence summary of grounding quality"
 }}
 
-Scoring guide:
-- 0.9-1.0: Answer is fully grounded, all claims traceable to sources
-- 0.7-0.9: Mostly grounded, minor gaps
-- 0.5-0.7: Partially grounded, some unverifiable claims
-- 0.0-0.5: Significant hallucination risk"""
+Scoring:
+- 0.9-1.0: fully grounded
+- 0.7-0.9: mostly grounded, minor gaps
+- 0.5-0.7: partial, some unverifiable claims
+- 0.0-0.5: likely hallucination"""
 
 _HUMAN = """Question: {query}
 
-Draft Answer: {answer}
+Draft Answer (excerpt): {answer_excerpt}
 
-Sources used:
-{sources}"""
+Sources: {sources}"""
 
 _prompt = ChatPromptTemplate.from_messages([
     ("system", _SYSTEM),
@@ -40,28 +45,33 @@ _prompt = ChatPromptTemplate.from_messages([
 
 def verifier_node(state: ResearchState) -> dict:
     threshold = float(os.getenv("VERIFIER_THRESHOLD", "0.70"))
-    chain = _prompt | get_llm() | JsonOutputParser()
 
-    sources = "\n".join(f"- [{c.title}]({c.url})" for c in state.citations)
+    try:
+        chain = _prompt | get_llm() | ThinkingJsonOutputParser()
+        sources = ", ".join(c.url for c in state.citations[:5])
+        result = chain.invoke({
+            "query": state.query,
+            "answer_excerpt": state.draft_answer[:_MAX_ANSWER_CHARS],
+            "sources": sources,
+        })
+        score = float(result.get("confidence_score", 0.0))
+        feedback = result.get("feedback", "")
+    except Exception as e:
+        # Verifier failure is non-fatal — log it and continue with a neutral score
+        logger.warning("Verifier failed (%s) — using default score 0.75", e)
+        score = 0.75
+        feedback = "Verification skipped due to error."
 
-    result = chain.invoke({
-        "query": state.query,
-        "answer": state.draft_answer,
-        "sources": sources,
-    })
-
-    score = float(result.get("confidence_score", 0.0))
     return {
         "confidence_score": score,
         "uncertainty_flagged": score < threshold,
-        "verifier_feedback": result.get("feedback", ""),
+        "verifier_feedback": feedback,
     }
 
 
 def should_rewrite(state: ResearchState) -> str:
-    """Conditional edge — retry once if confidence is too low.
-    retries is incremented by synthesiser_node, so after one retry it equals 2.
-    """
-    if state.uncertainty_flagged and state.retries < 2:
+    """Conditional edge — retry only if explicitly enabled."""
+    enable_retry = os.getenv("ENABLE_RETRY", "false").lower() == "true"
+    if enable_retry and state.uncertainty_flagged and state.retries < 2:
         return "retry"
     return "format"

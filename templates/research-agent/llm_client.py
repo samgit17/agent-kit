@@ -24,7 +24,12 @@ def get_llm() -> BaseChatModel:
         return ChatOllama(
             model=os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
             base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+            #format="json",       # constrains token sampler to valid JSON only —
+                                 # also suppresses <think> blocks since they aren't valid JSON
             temperature=0.2,
+            num_ctx=8192,
+            num_predict=int(os.getenv("OLLAMA_MAX_TOKENS", "2048")),
+            timeout=int(os.getenv("OLLAMA_TIMEOUT", "120")),
         )
 
     else:

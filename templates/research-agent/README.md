@@ -1,96 +1,132 @@
-# Research Agent
+# Research Agent v2
 
-**A multi-step LangGraph agent that researches a topic, synthesises findings, and returns a structured report.**
+Inspired by Karpathy's autoresearch pattern. `program.md` is the only file you edit.
 
-Give it a question. It plans search queries, gathers information across multiple steps, reasons over the results, verifies its answer, and outputs a cited markdown report. Runs locally with Ollama or against OpenAI — switchable via `.env`.
+## Backends
 
----
+| Backend | What it does | Metric |
+|---|---|---|
+| `web` | Multi-step web research → markdown report | Confidence score |
+| `ml_experiment` | Ratchet loop: propose → train → eval → keep/revert | val_bpb |
 
-## What It Does
-
-```
-User question
-  → Planner        (breaks question into 3–5 search queries)
-  → Searcher       (executes each query via Tavily or DuckDuckGo)
-  → Synthesiser    (reasons over gathered results, builds draft answer)
-  → Verifier       (scores faithfulness, flags uncertainty)
-  → Formatter      (outputs structured markdown report with citations)
-```
-
-## Quickstart
+## Quick Start
 
 ```bash
-# 1. Install dependencies
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-# 2. Configure
-cp .env.example .env
-# Edit .env — set LLM_PROVIDER, API keys, and search provider
-
-# 3. Run
-python run.py --query "What are the latest developments in agentic AI security?"
-
-# Or interactive mode
+cp .env.example .env          # configure LLM_PROVIDER and model
+# edit program.md             # set backend, goal, constraints
 python run.py
 ```
 
-## Configuration
+## Folder Structure
 
-All configuration is in `.env`. See `.env.example` for all options.
+```
+research-agent/                   ← rename from research-agent-v2 when replacing v1
+├── program.md                    ← ONLY file you edit to control the agent
+├── run.py                        ← entry point: python run.py
+├── program_parser.py             ← parses program.md into typed config
+├── requirements.txt
+├── .env.example                  ← copy to .env and configure
+├── .gitignore
+├── backends/
+│   ├── llm.py                    ← shared LLM factory (Ollama / OpenAI)
+│   ├── log.py                    ← shared Rich console + log()
+│   ├── web/
+│   │   ├── graph.py              ← LangGraph: planner→searcher→synthesiser→verifier→formatter
+│   │   ├── models.py             ← ResearchState
+│   │   └── nodes.py              ← node functions
+│   └── ml_experiment/
+│       ├── graph.py              ← LangGraph: proposer→executor→evaluator→committer→reporter
+│       ├── models.py             ← MLResearchState, ExperimentRecord
+│       ├── nodes.py              ← ratchet loop node functions
+│       └── train.py             ← nanochat training script (agent edits this only)
+├── output/
+│   └── report.md                 ← web backend writes here (git-ignored)
+└── tests/
+    ├── test_log.py
+    └── test_run_config.py
+```
 
-| Variable | Required | Description |
-|---|---|---|
-| `LLM_PROVIDER` | ✅ | `openai` or `ollama` |
-| `OPENAI_API_KEY` | if OpenAI | Your OpenAI API key |
-| `OPENAI_MODEL` | if OpenAI | e.g. `gpt-4o` |
-| `OLLAMA_BASE_URL` | if Ollama | e.g. `http://localhost:11434` |
-| `OLLAMA_MODEL` | if Ollama | e.g. `llama3.1:8b` |
-| `SEARCH_PROVIDER` | ✅ | `tavily` or `duckduckgo` |
-| `TAVILY_API_KEY` | if Tavily | Your Tavily API key |
-| `MAX_SEARCH_QUERIES` | ❌ | Default: `5` |
-| `MAX_SEARCH_RESULTS` | ❌ | Default: `3` per query |
-| `VERIFIER_THRESHOLD` | ❌ | Min confidence to accept answer. Default: `0.7` |
+## Console Output
 
-## Output
+```
+╭─ Research Agent v2 ──────────────────────╮
+│ Backend:  web                             │
+│ Goal:     What are best practices for…   │
+│ LLM: OLLAMA  ·  Search: DUCKDUCKGO       │
+╰───────────────────────────────────────────╯
+[planner]     Generated 3 queries
+[searcher]    Retrieved 9 results across 3 queries
+[synthesiser] Draft complete (iteration 1/3)
+[verifier]    Confidence: 82%  ✅
+[formatter]   Report ready
+[run]         Report saved to output/report.md
+```
 
-The agent writes a markdown report to `output/report.md`:
+Web backend saves the final report to `output/report.md`.
+
+## ML Experiment Backend — Setup
+
+The ratchet loop uses `git checkout` to revert bad experiments. `train.py`
+must be committed before the first run:
+
+```bash
+cd backends/ml_experiment
+git init
+git add train.py
+git commit -m "baseline"
+```
+
+### GPU Selection
+
+Set `gpu:` in `program.md` to select the CUDA device index:
 
 ```markdown
-# Research Report: <your question>
-
-## Summary
-...
-
-## Findings
-
-### Finding 1 — <topic>
-...
-[Source: <url>]
-
-## Confidence Score: 0.87
-## Queries used: 4
-## Sources: 9
+## constraints
+gpu: 0    # 0 = 4070 Super (12GB) — use DEPTH<=4, batch_size<=8
+gpu: 1    # 1 = 5060 Ti  (16GB)  — DEPTH<=6, batch_size<=16 are safe
 ```
 
-## Extending This Template
+### PyTorch for 5060 Ti (Blackwell)
 
-- **Add a new tool** — create a file in `tools/` and register it in `graph.py`
-- **Change the LLM** — update `LLM_PROVIDER` in `.env`; the `llm_client.py` abstraction handles the rest
-- **Add memory** — replace the in-memory state with a Redis-backed checkpointer in `graph.py`
-- **Add a UI** — the `run.py` entry point exposes a `run_research(query: str)` function you can call from any web framework
+Stable PyTorch does not support Blackwell. Install nightly:
 
-## Architecture
-
-See [`graph.py`](./graph.py) for the full LangGraph state graph definition.
-
+```bash
+pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/cu128
 ```
-ResearchState
-  ├── query: str
-  ├── search_queries: list[str]
-  ├── search_results: list[SearchResult]
-  ├── draft_answer: str
-  ├── citations: list[Citation]
-  ├── confidence_score: float
-  ├── uncertainty_flagged: bool
-  └── final_report: str
+
+4070 Super works on stable PyTorch ≥2.4.
+
+## program.md Reference
+
+```markdown
+## backend
+web | ml_experiment
+
+## goal
+<what you want to achieve>
+
+## success_criteria      # web only
+- criterion 1
+
+## directions            # ml_experiment only
+- things to try
+
+## constraints
+# web
+max_iterations: 3
+
+# ml_experiment
+gpu: 0
+minutes_per_experiment: 10
+max_experiments: 20
+revert_on_no_improvement: true
+vram_budget_gb: 12
+```
+
+## Tests
+
+```bash
+python -m pytest tests/ -v
 ```

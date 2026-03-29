@@ -10,7 +10,7 @@ Stop rebuilding the same agent scaffolding from scratch. AgentKit gives you prod
 
 | Template | What it does | LLM | Status |
 |---|---|---|---|
-| [research-agent](./templates/research-agent/) | Multi-step web research → structured report | Ollama / OpenAI | ✅ Ready |
+| [research-agent](./templates/research-agent/) | Web research → report · ML experiment ratchet loop (Karpathy-style) | Ollama / OpenAI | ✅ Ready |
 | *coming soon* | | | 🔜 |
 | *coming soon* | | | 🔜 |
 

@@ -1,12 +1,24 @@
-# Research Agent — dependencies
-# Self-contained: do not import from outside this directory
+# Core
+langgraph>=0.2
+langchain-core>=0.3
+langchain-community>=0.3
+python-dotenv>=1.0
+rich>=13.0
+pydantic>=2.0
 
-langgraph>=0.2.0
-langchain-core>=0.2.0
-langchain-openai>=0.1.0        # used when LLM_PROVIDER=openai
-langchain-ollama>=0.1.0        # used when LLM_PROVIDER=ollama
-tavily-python>=0.3.0           # used when SEARCH_PROVIDER=tavily
-duckduckgo-search>=6.0.0       # used when SEARCH_PROVIDER=duckduckgo
-pydantic>=2.0.0
-python-dotenv>=1.0.0
-rich>=13.0.0                   # terminal output formatting
+# LLM providers (install the one you use)
+langchain-ollama>=0.2
+langchain-openai>=0.2        # optional — only if LLM_PROVIDER=openai
+
+# Search providers (install the one you use)
+langchain-tavily>=0.1        # optional — only if SEARCH_PROVIDER=tavily
+duckduckgo-search>=6.0       # default, no API key needed
+
+# Dev
+pytest>=8.0
+
+# ML experiment backend
+# PyTorch: see note below
+# torch>=2.4                 # 4070 Super — stable
+# torch>=2.7 (nightly)       # 5060 Ti (Blackwell) — requires nightly build
+# Install nightly: pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/cu128

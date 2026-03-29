@@ -1,16 +1,7 @@
-# Generated reports — never commit
-output/*.md
-output/*.txt
-output/*.json
-
-# Keep the directory itself
-!output/.gitkeep
-
-# Secrets
-.env
-
-# Python
+.venv/
 __pycache__/
 *.pyc
-.venv/
-venv/
+.pytest_cache/
+output/
+.env
+backends/ml_experiment/data/

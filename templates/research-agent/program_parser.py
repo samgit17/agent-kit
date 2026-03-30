@@ -24,6 +24,7 @@ class MLConfig:
     max_experiments: int = 20
     revert_on_no_improvement: bool = True
     vram_budget_gb: int = 12
+    known_constraints: list = field(default_factory=list)
 
 
 @dataclass
@@ -57,7 +58,7 @@ def parse_program(path: str | Path = "program.md") -> ProgramConfig:
 
     cfg = ProgramConfig()
 
-    if "backend" in sections:
+    if "backend" in sections and sections["backend"]:
         val = sections["backend"][0].strip()
         if val in ("web", "ml_experiment"):
             cfg.backend = val  # type: ignore[assignment]
@@ -73,6 +74,11 @@ def parse_program(path: str | Path = "program.md") -> ProgramConfig:
     if "directions" in sections:
         cfg.directions = [
             l.lstrip("- ").strip() for l in sections["directions"] if l.strip()
+        ]
+
+    if "known_constraints" in sections:
+        cfg.ml.known_constraints = [
+            l.lstrip("- ").strip() for l in sections["known_constraints"] if l.strip()
         ]
 
     if "constraints" in sections:

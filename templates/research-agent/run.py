@@ -53,6 +53,9 @@ def _check_git():
 
 
 def main():
+    from datetime import datetime
+    start = datetime.now()
+    log("[run]", f"Started at {start.strftime('%Y-%m-%d %H:%M:%S')}")
     program_path = Path("program.md")
     if not program_path.exists():
         console.print("[red]program.md not found.[/red]")
@@ -79,6 +82,11 @@ def main():
     graph = build_graph(cfg)
     initial_state = build_initial_state(cfg)
 
+    if cfg.backend == "ml_experiment":
+        best = initial_state.get("best_val_bpb", float("inf"))
+        if best != float("inf"):
+            log("[run]", f"Resuming from git history — best val_bpb so far: {best:.4f}")
+
     result = graph.invoke(initial_state)
 
     report = result.get("report", "")
@@ -91,6 +99,9 @@ def main():
         REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
         REPORT_PATH.write_text(report, encoding="utf-8")
         log("[run]", f"Report saved to {REPORT_PATH}")
+
+    elapsed = datetime.now() - start
+    log("[run]", f"Finished at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} — elapsed {str(elapsed).split('.')[0]}")
 
 
 if __name__ == "__main__":

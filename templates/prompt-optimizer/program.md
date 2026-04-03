@@ -24,7 +24,7 @@ skill.md
 - Do not change the Output Format section
 
 ## constraints
-outputs_per_round: 10
+outputs_per_round: 3
 target_score: 0.95
-max_experiments: 20
+max_experiments: 3
 revert_on_no_improvement: true

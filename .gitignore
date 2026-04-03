@@ -28,3 +28,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+#Phoenix Server bat file
+start-phoenix.bat

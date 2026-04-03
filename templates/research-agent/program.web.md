@@ -2,7 +2,7 @@
 web
 
 ## goal
-What are the best practices for securing multi-agent LLM systems in 2025?
+What are the best practices for agent traces in langchain in 2026?
 
 ## success_criteria
 - At least 5 credible sources

@@ -5,6 +5,8 @@ langchain-community>=0.3
 python-dotenv>=1.0
 rich>=13.0
 pydantic>=2.0
+arize-phoenix-otel==0.15.0
+openinference-instrumentation-langchain==0.1.59
 
 # LLM providers (install the one you use)
 langchain-ollama>=0.2

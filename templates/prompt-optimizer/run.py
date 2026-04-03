@@ -6,19 +6,31 @@ python run.py
 """
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
+    
+if os.getenv("TRACING_ENABLED"):
+    try:
+        from tracing import init_tracing
+        init_tracing("prompt-optomizer")
+    except ImportError:
+        pass  # tracing deps not installed
+
+import os
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
 
-from dotenv import load_dotenv
+
 from rich.markdown import Markdown
 from rich.panel import Panel
 
 from backends.log import console, log
 from program_parser import parse_program, ProgramConfig
 
-load_dotenv()
+
 
 
 def _load_backend(cfg: ProgramConfig):

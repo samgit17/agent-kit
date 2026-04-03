@@ -1,17 +1,14 @@
 ## backend
-ml_experiment
+web
 
 ## goal
-Improve val_bpb on nanochat. Baseline: measure first.
+What are the best practices for agent traces in langchain in 2026?
 
-## directions
-- Learning rate schedule (cosine vs flat)
-- DEPTH param (4 vs 6)
-- Batch size (8 vs 16)
+## success_criteria
+- At least 5 credible sources
+- Prefer sources from last 6 months
+- Focus on agentic attack surfaces, not general LLM safety
 
 ## constraints
-gpu: 1
-minutes_per_experiment: 10
-max_experiments: 5
-revert_on_no_improvement: true
-vram_budget_gb: 16
+max_iterations: 3
+confidence_threshold: 0.6

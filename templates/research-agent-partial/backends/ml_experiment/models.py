@@ -1,0 +1,15 @@
+from __future__ import annotations
+from pydantic import BaseModel, Field
+
+
+class ResearchState(BaseModel):
+    goal: str
+    success_criteria: list[str]
+    max_iterations: int
+
+    queries: list[str] = Field(default_factory=list)
+    search_results: list[dict] = Field(default_factory=list)
+    synthesis: str = ""
+    confidence: float = 0.0
+    iterations: int = 0
+    report: str = ""

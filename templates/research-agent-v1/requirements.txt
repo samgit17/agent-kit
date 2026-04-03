@@ -1,0 +1,12 @@
+# Research Agent — dependencies
+# Self-contained: do not import from outside this directory
+
+langgraph>=0.2.0
+langchain-core>=0.2.0
+langchain-openai>=0.1.0        # used when LLM_PROVIDER=openai
+langchain-ollama>=0.1.0        # used when LLM_PROVIDER=ollama
+tavily-python>=0.3.0           # used when SEARCH_PROVIDER=tavily
+duckduckgo-search>=6.0.0       # used when SEARCH_PROVIDER=duckduckgo
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+rich>=13.0.0                   # terminal output formatting

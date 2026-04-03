@@ -1,0 +1,16 @@
+# Generated reports — never commit
+output/*.md
+output/*.txt
+output/*.json
+
+# Keep the directory itself
+!output/.gitkeep
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

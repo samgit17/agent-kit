@@ -36,7 +36,7 @@ cd agent-kit
 cd templates/prompt-optimizer   # or research-agent
 
 # 3. Install dependencies
-pip install -r requirements.txt
+pip install -r requirements.txt # add -r requirements-dev.txt for tests
 
 # 4. Configure
 cp .env.example .env

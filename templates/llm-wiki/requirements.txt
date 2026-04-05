@@ -1,0 +1,5 @@
+langchain-core>=1.2,<2.0
+langchain-openai>=1.1,<2.0
+langgraph>=1.1,<2.0
+python-dotenv>=1.2,<2.0
+docling>=2.0,<3.0

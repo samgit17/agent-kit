@@ -12,6 +12,7 @@ Stop rebuilding the same agent scaffolding from scratch. AgentKit gives you prod
 |---|---|---|---|
 | [research-agent](./templates/research-agent/) | Web research → report · ML experiment ratchet loop (Karpathy-style) | Ollama / OpenAI | ✅ Ready |
 | [prompt-optimizer](./templates/prompt-optimizer/) | Ratchet loop for skill/prompt files — auto-improves against binary eval criteria | Ollama / OpenAI / Anthropic | ✅ Ready |
+| [llm-wiki](./templates/llm-wiki/) | Builds and maintains a personal knowledge base from documents | Ollama / OpenAI | ✅ Ready |
 | *coming soon* | | | 🔜 |
 
 ---

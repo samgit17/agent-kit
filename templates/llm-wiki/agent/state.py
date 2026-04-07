@@ -1,11 +1,12 @@
-from typing import Literal
-from typing_extensions import TypedDict
-from langchain_core.messages import BaseMessage
+from typing import TypedDict
 
 
 class WikiState(TypedDict):
-    operation: Literal["ingest", "query", "lint"]
-    input: str                    # source file path or query string
-    messages: list[BaseMessage]
-    wiki_index: str               # contents of wiki/index.md, injected into prompts
-    output: str                   # final human-readable response
+    operation: str
+    input: str          # file path, question, or URL
+    messages: list
+    wiki_index: str
+    pages_read: list
+    output: str
+    fetched_content: str  # populated when input is a URL; empty otherwise
+    save_output: bool     # --save flag for query operation

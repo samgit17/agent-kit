@@ -108,6 +108,10 @@ def main():
         REPORT_PATH.write_text(report, encoding="utf-8")
         log("[run]", f"Report saved to {REPORT_PATH}")
 
+        diagram_url = result.get("diagram_url")
+        if diagram_url:
+            log("[run]", f"Diagram: {diagram_url}")
+
     elapsed = datetime.now() - start
     log("[run]", f"Finished at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} — elapsed {str(elapsed).split('.')[0]}")
 

@@ -8,6 +8,7 @@ from .nodes import (
     should_retry,
     formatter_node,
 )
+from .diagrams import diagram_node, is_enabled as diagrams_enabled
 from program_parser import ProgramConfig
 
 
@@ -25,7 +26,13 @@ def build_graph(cfg: ProgramConfig):
     g.add_edge("searcher", "synthesiser")
     g.add_edge("synthesiser", "verifier")
     g.add_conditional_edges("verifier", should_retry, {"retry": "synthesiser", "format": "formatter"})
-    g.add_edge("formatter", END)
+
+    if diagrams_enabled():
+        g.add_node("diagrams", diagram_node)
+        g.add_edge("formatter", "diagrams")
+        g.add_edge("diagrams", END)
+    else:
+        g.add_edge("formatter", END)
 
     return g.compile()
 

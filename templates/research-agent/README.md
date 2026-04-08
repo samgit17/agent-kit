@@ -64,9 +64,10 @@ research-agent/
 │   ├── llm.py                    ← shared LLM factory (Ollama / OpenAI)
 │   ├── log.py                    ← shared Rich console + log()
 │   ├── web/
-│   │   ├── graph.py              ← LangGraph: planner→searcher→synthesiser→verifier→formatter
+│   │   ├── graph.py              ← LangGraph: planner→searcher→synthesiser→verifier→formatter→[diagrams]
 │   │   ├── models.py             ← ResearchState
-│   │   └── nodes.py              ← node functions
+│   │   ├── nodes.py              ← node functions
+│   │   └── diagrams.py           ← optional diagram skill (DIAGRAMS_ENABLED=true)
 │   └── ml_experiment/
 │       ├── graph.py              ← LangGraph: proposer→executor→evaluator→committer→reporter
 │       ├── models.py             ← MLResearchState, ExperimentRecord
@@ -96,6 +97,7 @@ research-agent/
 [synthesiser] Draft complete (iteration 1/3)
 [verifier]    Confidence: 68%  ✅
 [formatter]   Report ready
+[diagrams]    Diagram URL ready — open in browser to view/edit
 [run]         Report saved to output/report.md
 [run]         Finished at 2026-03-29 09:16:45 — elapsed 0:01:23
 ```
@@ -278,9 +280,82 @@ revert_on_no_improvement: true
 timeout_seconds: 30
 ```
 
+## Diagram Generation (web backend)
+
+Set `DIAGRAMS_ENABLED=true` in `.env` to generate a shareable concept map alongside the report.
+
+```bash
+DIAGRAMS_ENABLED=true python run.py
+```
+
+When enabled, a `diagram_node` runs after `formatter`. It uses the same LLM as the rest of the graph — no extra model config. Output is a clickable draw.io URL written to `state.diagram_url` and printed to the console.
+
+```
+[diagrams]    Diagram URL ready — open in browser to view/edit
+[run]         https://app.diagrams.net/#R<encoded>
+```
+
+The URL opens an **editable concept map** in the browser — no install required for the end user.
+
+```
+┌──────────────┐     ┌───────────────┐     ┌──────────────┐
+│  Zero Trust  │────▶│  Agent Comms  │────▶│  mTLS / JWT  │
+└──────────────┘     └───────────────┘     └──────────────┘
+        │
+        ▼
+┌──────────────┐
+│  Guardrails  │
+└──────────────┘
+```
+
+### Example `.env`
+
+```
+LLM_PROVIDER=ollama
+LLM_MODEL=qwen2.5:14b
+DIAGRAMS_ENABLED=true        # set false to skip diagram generation
+SEARCH_PROVIDER=duckduckgo
+```
+
+### Example `program.md` with diagrams
+
+```markdown
+## backend
+web
+
+## goal
+What are the best practices for securing multi-agent LLM systems in 2025?
+
+## success_criteria
+- At least 5 credible sources
+- Prefer sources from last 6 months
+- Focus on agentic attack surfaces, not general LLM safety
+
+## constraints
+max_iterations: 3
+confidence_threshold: 0.6
+```
+
+Run with:
+
+```bash
+DIAGRAMS_ENABLED=true python run.py
+```
+
+The report is written to `output/report.md` as usual. The diagram URL is printed to the console at the end of the run — paste it into a browser, Notion, Slack, or a README.
+
 ## Tests
 
 ```bash
 python -m pytest tests/ -v
-# 22 tests — log, run config, web nodes, ml graph, known constraints
+# 35 tests — log, run config, web nodes, ml graph, known constraints, diagrams
 ```
+
+| Test file | What it covers |
+|---|---|
+| `test_log.py` | Rich console + log() |
+| `test_run_config.py` | program.md parsing |
+| `test_web_nodes.py` | should_retry, threshold, initial state |
+| `test_ml_graph.py` | ML ratchet loop graph |
+| `test_known_constraints.py` | ML known_constraints parsing |
+| `test_diagrams.py` | is_enabled, URL encoding, fence stripping, diagram_node |

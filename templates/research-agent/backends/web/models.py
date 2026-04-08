@@ -15,3 +15,4 @@ class ResearchState(BaseModel):
     verifier_gaps: list[str] = Field(default_factory=list)
     iterations: int = 0
     report: str = ""
+    diagram_url: str | None = None  # populated by diagram_node when DIAGRAMS_ENABLED=true

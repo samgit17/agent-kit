@@ -28,7 +28,7 @@ def speak(text: str, local: bool = False) -> bytes:
         local: If True, use Piper; else use OpenAI API
     
     Returns:
-        WAV audio bytes
+        Raw PCM audio bytes
     """
     if not text.strip():
         return b""
@@ -49,11 +49,48 @@ def _speak_openai(text: str) -> bytes:
         model="tts-1",
         voice="alloy",
         input=text,
-        response_format="wav",
+        response_format="pcm",
     )
     
     log("[tts]", "Synthesized via OpenAI TTS API")
     return response.content
+
+
+def _sanitize_text_for_tts(text: str) -> str:
+    """Remove problematic characters for TTS.
+    
+    Piper's espeak phonemizer can choke on Unicode surrogates,
+    special characters, and various non-ASCII symbols.
+    Safest approach: convert to ASCII-only.
+    """
+    # First pass: replace common Unicode with ASCII equivalents
+    replacements = {
+        "\u202f": " ",   # narrow no-break space
+        "\u00a0": " ",   # non-breaking space
+        "\u2013": "-",   # en dash
+        "\u2014": "-",   # em dash
+        "\u2018": "'",   # left single quote
+        "\u2019": "'",   # right single quote
+        "\u201c": '"',   # left double quote
+        "\u201d": '"',   # right double quote
+        "\u2026": "...", # ellipsis
+        "\u2022": ",",   # bullet point -> pause
+        "\u2023": ",",   # triangular bullet
+        "\u2043": "-",   # hyphen bullet
+        "\u00b7": ",",   # middle dot
+        "\ufffd": "",    # replacement character
+    }
+    for char, replacement in replacements.items():
+        text = text.replace(char, replacement)
+    
+    # Second pass: encode to ASCII, dropping anything that doesn't fit
+    text = text.encode("ascii", errors="ignore").decode("ascii")
+    
+    # Clean up any resulting double spaces
+    while "  " in text:
+        text = text.replace("  ", " ")
+    
+    return text.strip()
 
 
 def _speak_local(text: str) -> bytes:
@@ -61,46 +98,31 @@ def _speak_local(text: str) -> bytes:
     _ensure_piper_model()
     model_path = _get_piper_model_path()
     
-    # Clean text of special Unicode characters that cause encoding issues on Windows
-    text = _sanitize_text_for_tts(text)
+    sanitized_text = _sanitize_text_for_tts(text)
     
-    # Run piper CLI
+    if not sanitized_text:
+        return b""
+    
+    # Run piper CLI with bytes input (avoids Windows encoding issues)
     result = subprocess.run(
         ["piper", "--model", str(model_path), "--output-raw"],
-        input=text.encode("utf-8"),
+        input=sanitized_text.encode("utf-8"),
         capture_output=True,
     )
     
     if result.returncode != 0:
-        log("[tts]", f"Piper error: {result.stderr.decode('utf-8', errors='ignore')}", style="red")
+        log("[tts]", f"Piper error: {result.stderr.decode()}", style="red")
         return b""
     
     log("[tts]", "Synthesized via Piper TTS")
     return result.stdout
 
 
-def _sanitize_text_for_tts(text: str) -> str:
-    """Remove/replace characters that cause TTS issues."""
-    import re
-    
-    # Replace narrow no-break space and other special spaces with regular space
-    text = text.replace('\u202f', ' ')  # narrow no-break space
-    text = text.replace('\u00a0', ' ')  # non-breaking space
-    text = text.replace('\u2009', ' ')  # thin space
-    
-    # Replace special dashes with regular dash
-    text = text.replace('–', '-')  # en-dash
-    text = text.replace('—', '-')  # em-dash
-    
-    # Remove other problematic Unicode
-    text = re.sub(r'[^\x00-\x7F]+', lambda m: m.group(0) if m.group(0) in ' -.,!?\'"' else ' ', text)
-    
-    return text
-
-
 def play_audio(audio_bytes: bytes, sample_rate: int = 22050) -> None:
-    """Play audio bytes through speakers."""
+    """Play audio bytes through speakers. Press Escape to stop."""
+    import threading
     import sounddevice as sd
+    import keyboard
     
     if not audio_bytes:
         return
@@ -109,8 +131,24 @@ def play_audio(audio_bytes: bytes, sample_rate: int = 22050) -> None:
     audio_np = np.frombuffer(audio_bytes, dtype=np.int16)
     audio_float = audio_np.astype(np.float32) / 32768.0
     
+    stop_event = threading.Event()
+    
+    def wait_for_escape():
+        keyboard.wait("escape")
+        stop_event.set()
+        sd.stop()
+    
+    listener = threading.Thread(target=wait_for_escape, daemon=True)
+    listener.start()
+    
+    log("[tts]", "Playing audio (press Escape to stop)...")
     sd.play(audio_float, samplerate=sample_rate)
-    sd.wait()
+    
+    # Poll instead of sd.wait() so escape can interrupt
+    while sd.get_stream().active and not stop_event.is_set():
+        sd.sleep(100)
+    
+    sd.stop()
 
 
 def _get_cache_dir() -> Path:

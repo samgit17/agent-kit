@@ -84,27 +84,46 @@ def main():
             sample_rate = 22050 if args.local else 24000  # Piper vs OpenAI
             play_audio(audio_bytes, sample_rate=sample_rate)
 
-
 def _strip_markdown(text: str) -> str:
-    """Remove markdown formatting for TTS."""
+    """Remove markdown formatting for natural TTS."""
     import re
     
     # Remove horizontal rules
     text = re.sub(r"^---+$", "", text, flags=re.MULTILINE)
     
+    # Remove headers (keep the text)
+    text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
+    
+    # Remove bold markers FIRST (before italics)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    
     # Remove italics markers
     text = re.sub(r"\*([^*]+)\*", r"\1", text)
     
-    # Remove bold markers
-    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    # Remove inline code backticks
+    text = re.sub(r"`([^`]+)`", r"\1", text)
     
-    # Remove citation numbers like [1]
+    # Remove citation numbers like [1], [2], [N]
     text = re.sub(r"\[\d+\]", "", text)
+    
+    # Remove URLs (replace with nothing or "link")
+    text = re.sub(r"https?://\S+", "", text)
+    
+    # Remove markdown links [text](url) -> text
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    
+    # Remove bullet points, convert to pause
+    text = re.sub(r"^\s*[-*]\s+", "", text, flags=re.MULTILINE)
+    
+    # Remove numbered lists prefix
+    text = re.sub(r"^\s*\d+\.\s+", "", text, flags=re.MULTILINE)
     
     # Clean up extra whitespace
     text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r"  +", " ", text)
     
     return text.strip()
+
 
 
 if __name__ == "__main__":

@@ -1,0 +1,38 @@
+# Core
+langgraph>=0.2
+langchain-core>=0.3
+langchain-community>=0.3
+python-dotenv>=1.0
+rich>=13.0
+pydantic>=2.0
+
+# LLM providers
+langchain-ollama>=0.2
+langchain-openai>=0.2         # for LLM_PROVIDER=openai
+
+# Search providers
+duckduckgo-search>=6.0        # default, no API key needed
+langchain-tavily>=0.1         # optional, if SEARCH_PROVIDER=tavily
+
+# Audio - OpenAI (default)
+openai>=1.0                   # Whisper API + TTS API
+
+# Audio - recording & playback
+sounddevice>=0.4
+numpy>=1.24
+keyboard>=0.13                # push-to-talk (requires root on Linux)
+
+# Audio - file formats
+pydub>=0.25                   # MP3/M4A support (requires ffmpeg)
+scipy>=1.10                   # WAV resampling
+
+# Audio - local models (optional, for --local flag)
+# faster-whisper>=1.0         # uncomment for local STT
+# piper-tts>=1.2              # uncomment for local TTS
+
+# Tracing (optional)
+# arize-phoenix-otel>=0.15
+# openinference-instrumentation-langchain>=0.1
+
+# Dev
+pytest>=8.0

@@ -152,10 +152,24 @@ def build_query_node(model, tool_map: dict, prompter: Callable[[str], str] = inp
     def query_node(state: WikiState) -> WikiState:
         console.rule("[bold blue]query")
 
-        messages = _react_loop(model, [
-            SystemMessage(content=_query_prompt(state["wiki_index"])),
-            HumanMessage(content=state["input"]),
-        ], tool_map)
+        # History threading (added): reuse accumulated messages across turns
+        # when present, instead of always starting fresh. Confirmed this was
+        # previously entirely absent — state["messages"] was returned every
+        # call but never read on entry, so each turn started cold regardless
+        # of what a caller passed in. Purely additive: when state["messages"]
+        # is empty (the default for every existing single-shot caller, e.g.
+        # run.py's CLI), behaviour is unchanged from before — the system
+        # prompt is only re-injected on what's genuinely a first turn.
+        prior_messages = state.get("messages", [])
+        if prior_messages:
+            initial_messages = [*prior_messages, HumanMessage(content=state["input"])]
+        else:
+            initial_messages = [
+                SystemMessage(content=_query_prompt(state["wiki_index"])),
+                HumanMessage(content=state["input"]),
+            ]
+
+        messages = _react_loop(model, initial_messages, tool_map)
         answer = messages[-1].content
         console.print(answer)
 

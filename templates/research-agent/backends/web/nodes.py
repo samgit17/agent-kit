@@ -34,19 +34,36 @@ def _search(query: str) -> list[dict]:
 def planner_node(state: ResearchState) -> dict:
     criteria_text = "\n".join(f"- {c}" for c in state.success_criteria)
     prompt = f"""You are a research planner. Generate 3 precise search queries to satisfy:
-
+ 
 GOAL: {state.goal}
-
+ 
 SUCCESS CRITERIA:
 {criteria_text}
-
+ 
 Return ONLY a JSON array of 3 query strings. No explanation."""
-
-    response = get_llm().invoke([HumanMessage(content=prompt)])
+ 
+    response = get_llm(json_mode=True).invoke([HumanMessage(content=prompt)])
     raw = strip_json_fence(response.content)
-    queries = json.loads(raw)
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, list):
+            queries = parsed
+        elif isinstance(parsed, dict) and len(parsed) == 1:
+            # Ollama's format="json" (and JSON-mode generally) biases models
+            # toward a top-level object even when a bare array was requested -
+            # confirmed live with phi4-mini:3.8b, which wrapped the array as
+            # {"queries": [...]}. Unwrap a single-key dict rather than fight it.
+            queries = next(iter(parsed.values()))
+            if not isinstance(queries, list):
+                raise ValueError("wrapped value is not a list")
+        else:
+            raise ValueError(f"unexpected JSON shape: {type(parsed).__name__}")
+    except (json.JSONDecodeError, ValueError) as e:
+        log("[planner]", f"Failed to parse queries as JSON ({type(e).__name__}), falling back to goal as single query: {raw[:200]!r}", style="red")
+        queries = [state.goal]
     log("[planner]", f"Generated {len(queries)} queries")
     return {"queries": queries}
+
 
 
 def searcher_node(state: ResearchState) -> dict:
@@ -91,7 +108,6 @@ Write a structured draft in markdown. Be factual. Cite sources by number."""
     log("[synthesiser]", f"Draft complete (iteration {state.iterations + 1}/{state.max_iterations})")
     return {"synthesis": response.content, "iterations": state.iterations + 1}
 
-
 def verifier_node(state: ResearchState) -> dict:
     criteria_text = "\n".join(f"- {c}" for c in state.success_criteria)
     prompt = f"""Rate how well this draft satisfies the research criteria.
@@ -104,9 +120,13 @@ DRAFT:
 
 Return ONLY a JSON object: {{"confidence": 0.0-1.0, "gaps": ["..."]}}"""
 
-    response = get_llm().invoke([HumanMessage(content=prompt)])
+    response = get_llm(json_mode=True).invoke([HumanMessage(content=prompt)])
     raw = strip_json_fence(response.content)
-    result = json.loads(raw)
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError:
+        log("[verifier]", f"Failed to parse confidence/gaps as JSON, treating as low-confidence: {raw[:200]!r}", style="red")
+        result = {"confidence": 0.0, "gaps": ["verifier output was not valid JSON"]}
     confidence = result.get("confidence", 0.0)
     gaps = result.get("gaps", [])
     log("[verifier]", f"Confidence: {confidence:.0%}" + ("  ✅" if confidence >= state.confidence_threshold else "  ↩ retrying"))
